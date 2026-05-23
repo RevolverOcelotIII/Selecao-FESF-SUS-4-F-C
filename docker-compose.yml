@@ -22,6 +22,7 @@ services:
       - ./backend:/code
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - PYTHONPATH=/code
     depends_on:
       - db
 

@@ -1,11 +1,15 @@
 import os
+import sys
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from app.models.base import Base
+
 from app.core.database import Base
 from app.models.base import * 
-
 
 target_metadata = Base.metadata
 # this is the Alembic Config object, which provides
