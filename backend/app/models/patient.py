@@ -7,4 +7,3 @@ class Patient(Base):
     full_name = Column(String(255), nullable=False)
     cpf = Column(String(14), unique=True, index=True, nullable=False)
     birth_date = Column(Date, nullable=False)
-    medical_record_number = Column(String(50), unique=True, nullable=False)
