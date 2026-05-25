@@ -1,27 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MdEdit, MdDelete } from "react-icons/md";
 import { GridPage } from "@/src/components/layout/GridPage/GridPage";
 import { GridColumn } from "@/src/types";
-import { Patient } from "@/src/types/app/patients/PatientsPage";
-import { PatientModal } from "@/src/app/patients/PatientModal";
+import { Patient } from "@/src/types/patient";
+import { PATIENT_COLUMNS } from "@/src/models/patient";
+import { PatientFormModal } from "@/src/app/patients/PatientFormModal";
+import { PatientService } from "@/src/services/patients";
 import "@/src/styles/app/patients.css";
-
-const initialPatients: Patient[] = [
-  { id: 1, name: "Anna Müller", birthDate: "1984-03-12", gender: "F", room: "204", status: "Admitted" },
-  { id: 2, name: "James O'Connor", birthDate: "1971-09-02", gender: "M", room: "112", status: "Observation" },
-  { id: 3, name: "Sofia Almeida", birthDate: "1995-06-21", gender: "F", room: "—", status: "Discharged" },
-];
 
 export default function PatientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [patients, setPatients] = useState<Patient[]>(initialPatients);
-  
-  const filteredPatients = patients.filter(patient => 
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchPatients = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) {
+        setIsLoading(true);
+      }
+
+      const data = await PatientService.getAll();
+
+      setPatients(data);
+    } catch (error) {
+      console.error("Failed to fetch patients:", error);
+    } finally {
+      if (showLoading) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  const filteredPatients = patients.filter(patient => {
+    return patient.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (patient.cpf && patient.cpf.includes(searchTerm))
+  }
   );
 
   const handleEdit = (patient: Patient) => {
@@ -34,43 +51,40 @@ export default function PatientsPage() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (data: Partial<Patient>) => {
-    if (selectedPatient) {
-      setPatients(prev => prev.map(p => 
-        p.id === selectedPatient.id ? { ...p, ...data } as Patient : p
-      ));
-    } else {
-      const newPatient: Patient = {
-        ...data,
-        id: Math.max(...patients.map(p => p.id), 0) + 1,
-      } as Patient;
-      setPatients(prev => [...prev, newPatient]);
+  const handleSubmit = async (data: Partial<Patient>) => {
+    try {
+      if (selectedPatient) {
+        await PatientService.update(selectedPatient.id, data);
+      } else {
+        await PatientService.create(data);
+      }
+      setIsModalOpen(false);
+      fetchPatients(true);
+    } catch (error) {
+      console.error("Failed to save patient:", error);
+      alert("Error saving patient. Please check the data and try again.");
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this patient?")) {
-      setPatients(prev => prev.filter(p => p.id !== id));
+      try {
+        await PatientService.delete(id);
+        fetchPatients(true);
+      } catch (error) {
+        console.error("Failed to delete patient:", error);
+        alert("Error deleting patient.");
+      }
     }
   };
 
-  const patientColumns: GridColumn<Patient>[] = [
-    { header: "Name", accessor: "name"},
-    { header: "Birth date", accessor: "birthDate"},
-    { header: "Gender", accessor: "gender" },
-    { header: "Room", accessor: "room"},
-    { 
-      header: "Status", 
-      accessor: (patient) => {
-        const statusType = patient.status.toLowerCase();
-        return (
-          <span className={`status-badge status-${statusType}`}>
-            {patient.status}
-          </span>
-        );
-      } 
-    },
+  const gridColumns: GridColumn<Patient>[] = [
+    ...PATIENT_COLUMNS
+      .filter(column => column.grid)
+      .map(column => ({
+        header: column.label,
+        accessor: column.name as keyof Patient,
+      })),
     {
       header: "Actions",
       align: "right",
@@ -96,20 +110,25 @@ export default function PatientsPage() {
     }
   ];
 
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
   return (
     <>
       <GridPage
         title="Patients"
         description="People currently registered with the hospital."
         data={filteredPatients}
-        columns={patientColumns}
+        columns={gridColumns}
         rowKey="id"
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         onNewClick={handleNew}
+        isLoading={isLoading}
       />
 
-      <PatientModal
+      <PatientFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmit}
