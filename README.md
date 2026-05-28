@@ -1,21 +1,83 @@
-# MedManager ERP - Hospital Operations Suite
+# MedManager ERP - Plataforma de Operações Hospitalares
 
-**MedManager** is a prototype and Proof of Concept for a high-performance, customizable hospital ERP (Enterprise Resource Planning) platform. It demonstrates a robust approach to streamlining hospital operations, clinical workflows, and resource management through a fully dynamic, model-driven architecture.
+**MedManager** é um protótipo e Proof of Concept (PoC) de um ERP hospitalar de alta performance e customizável. O projeto demonstra uma abordagem robusta para otimizar operações hospitalares, fluxos clínicos e gestão de recursos através de uma arquitetura **Model-Driven** totalmente dinâmica.
 
 ---
 
-## 🏗 System Overview: Dynamic Logic & Configuration
-Unlike traditional rigid ERPs, MedManager is built on a **fully dynamic entity engine**. The behavior of the clinical flow is not hardcoded but is defined by the relationship between two primary administrative entities:
+## 📦 Estratégia de Entrega e Repositórios (Barema)
 
-1.  **Dynamic Roles**: Administrators create job titles (e.g., "Cardiac Surgeon", "Triage Nurse") and map them to one of the **5 Base Access Levels**. This determines the broad data scope the user can access (Medical, Logistics, Pharmaceutical, or Admin).
-2.  **Dynamic Procedures**: Every clinical action (e.g., "Blood Test", "MRI Scan", "Pre-Op Triage") is an entry in the catalog that can be created and personalized at any time by an Administrator. 
+Para atender estritamente aos critérios de nomenclatura e organização do **Edital N.º 01/2026 (Anexo IV - Barema)**, este projeto foi replicado em múltiplos repositórios. 
 
-### The Permission Matrix (RBAC)
-The core innovation of the prototype is the **Role-Procedure Junction**. For every Procedure created, Administrators explicitly define:
--   **Dispatch Roles**: Which specific Roles are authorized to *order* this action.
--   **Execute Roles**: Which specific Roles are qualified to *perform* this action and record clinical notes.
+**Nota Importante:** Todos os repositórios listados abaixo contêm o **exato mesmo código-fonte** da aplicação Full Stack integrada. A única diferença entre eles é o arquivo `README.md`, que foi adaptado individualmente para destacar os requisitos específicos de cada item de avaliação:
 
-This dynamic mapping creates a precise "need-to-know" and "authorized-to-act" environment. A Doctor role might be able to execute 50 different procedures but only dispatch 5, while a Nurse role might execute the Triage that the Attendant dispatched.
+1.  **Seleção FESF-SUS – 1 F.C**: Foco na demonstração da **API Python (FastAPI)** **Interface React (Next.js)** com gerenciamento de estados utilizando **Zustand**.
+2.  **Seleção FESF-SUS – 2 F.C**: Foco na orquestração **Docker** e implementação de segurança **OAuth2**.
+3.  **Seleção FESF-SUS – 3 F.C**: Foco na explicação do uso de **Redis** para caches no projeto.
+4.  **Seleção FESF-SUS – 4 F.C**: Foco na suíte de testes automatizados (**Unit & Integration Tests**).
+---
+### Descrição de requisitos do Seleção FESF-SUS – 4 F.C:
+
+**1. Testes de Backend (Pytest)**
+
+  A suíte de testes do backend foi desenvolvida para garantir a integridade das regras de negócio hospitalares e a segurança dos endpoints.
+
+   * Infraestrutura e Isolamento (`backend/app/tests/conftest.py`):
+       * Implementa uma estratégia de Banco de Dados de Teste Dedicado em PostgreSQL, garantindo compatibilidade total com tipos de dados
+         complexos (Enums, BigInt).
+       * Utiliza fixtures para criar contextos de usuários com diferentes níveis de acesso (`admin_user`, `doctor_user`, `attendant_user`), permitindo
+         testar o RBAC de forma integrada.
+       * Gerencia a limpeza automática das tabelas entre cada teste para garantir isolamento absoluto.
+
+   * Testes de Serviço (Unitários):
+       * Exemplo: `backend/app/tests/services/test_patient_service.py` e `test_employee_service.py`.
+       * Validam regras críticas como unicidade de CPF, hashing de senhas e a serialização restrita de campos sensíveis (ex: ocultar salários
+         para não-admins).
+
+   * Testes de Controlador (Integração):
+       * Exemplo: `backend/app/tests/controllers/test_auth_controller.py` e `test_attendance_controller.py`.
+       * Simulam requisições HTTP reais usando o TestClient do FastAPI, validando códigos de status (200, 201, 403), cabeçalhos de autenticação e
+         o formato do JSON retornado.
+
+  ---
+
+  2. Testes de Frontend (Jest e React Testing Library)
+
+  No frontend, os testes focam no comportamento do usuário e na integração correta com o estado global da aplicação.
+
+   * Configuração Global (`frontend/jest.setup.ts`):
+       * Centraliza os mocks necessários para o ambiente JSDOM (como o roteador do Next.js e o serviço de cookies).
+       * Gerencia o estado global do Zustand (`useAuthStore`), garantindo que os testes iniciem em um estado autenticado por padrão.
+
+   * Testes de Componentes e Layout:
+       * Exemplo: `frontend/src/spec/components/layout/Grid/Grid.spec.tsx` e `frontend/src/spec/components/layout/Form/SearchInput.spec.tsx`.
+       * Validam lógicas complexas como a ordenação automática por `updated_at`, filtragem em tempo real em dropdowns pesquisáveis e renderização
+         de badges coloridos.
+
+   * Testes de Fluxo e RBAC:
+       * Exemplo: `frontend/src/spec/app/users/UsersPage.spec.tsx`.
+       * Comprova que o sistema redireciona usuários sem permissão (ex: Médicos tentando acessar a página de Usuários) e valida o preenchimento e
+         submissão de formulários complexos via user-event.
+
+  ---
+
+  3. Execução Funcional
+
+  O desenvolvimento funcional é comprovado pela execução bem-sucedida de 85 testes de backend e 13 arquivos de teste de frontend dentro dos containers
+  Docker, garantindo que qualquer alteração no código seja validada automaticamente contra regressões.
+
+   * Comandos de Verificação:
+       * Backend: docker-compose exec api pytest app/tests/
+       * Frontend: docker-compose exec frontend npm test
+
+
+## 🏗 Visão Geral: Lógica Dinâmica e Configuração
+
+Diferente de ERPs rígidos, o MedManager utiliza um motor de **entidades dinâmicas**. O comportamento do fluxo clínico não é definido por código fixo, mas pela parametrização administrativa:
+
+1.  **Dynamic Roles**: O administrador cria cargos (ex: "Cirurgião", "Enfermeiro de Triagem") e os vincula a um dos **5 Níveis de Acesso Base** (Medical, Logistics, Pharmaceutical, Admin ou Logged User).
+2.  **Dynamic Procedures**: Cada ação clínica é um item de catálogo onde o administrador define a **Permission Matrix (RBAC)**:
+    *   **Dispatch Roles**: Quais cargos podem *solicitar* o procedimento.
+    *   **Execute Roles**: Quais cargos podem *executar* e registrar notas clínicas.
 
 ---
 
@@ -23,106 +85,85 @@ This dynamic mapping creates a precise "need-to-know" and "authorized-to-act" en
 
 ### Frontend
 - **Framework:** Next.js 15+ (App Router) | TypeScript
-- **State Management:** Zustand (Global Session, RBAC, and UI State)
-- **Internationalization:** i18n-js (v4) with support for English and Portuguese
-- **Testing:** Jest + React Testing Library (Strict **0-Mock Policy** for internal components)
-- **Styling:** Vanilla CSS Variables (Zinc palette, OKLCH colors)
+- **State Management:** Zustand (Session Global, RBAC e UI State)
+- **Internationalization:** i18n-js (Suporte a PT-BR e EN)
+- **Testing:** Jest + React Testing Library (Política de **Zero-Mock** para componentes internos)
+- **Styling:** Vanilla CSS Variables (Paleta Zinc, cores OKLCH)
 
 ### Backend
 - **Framework:** FastAPI (Python 3.11+)
 - **Database:** PostgreSQL | SQLAlchemy 2.0 (ORM) | Alembic (Migrations)
-- **Cache:** Redis (Integrated caching for catalog data and grid performance)
-- **Testing:** Pytest + Pytest-Describe + Pytest-Asyncio (Behavioral TDD)
-- **Architecture:** Service Layer pattern for decoupled business logic
+- **Cache:** Redis (Camada de cache para performance de queries e catálogos)
+- **Architecture:** **Service Layer Pattern** para desacoplamento da lógica de negócio.
 
 ---
 
-> **Note**: To see the prototype in full action, you must create at least **three different users** with different roles (e.g., one Attendant, one Nurse, and one Doctor).
+## 🚀 Passo a Passo do Sistema (Tutorial)
 
----
+> **Nota**: Para testar o fluxo completo, é necessário criar pelo menos **três usuários** com perfis diferentes (ex: Atendente, Enfermeiro e Médico).
 
-## 🚀 Full System Walkthrough (Tutorial)
+### 1. Parametrização das Regras de Negócio (Admin Setup)
+Logue como **Admin** para configurar a infraestrutura lógica:
 
-### 1. Building the Hospital "Brain" (Admin Setup)
-First, log in with an **Admin** account to configure the rules of the hospital.
+*   **Criar Roles**: Em **Administration > Roles**, crie os cargos "Recepcionista" (Level: Attendant), "Enfermeiro" (Level: Nurse) e "Médico" (Level: Doctor).
+<img width="1912" height="796" alt="Captura de tela 2026-05-27 211017" src="https://github.com/user-attachments/assets/a1a1b7cc-c5d0-4a52-872e-16e6b6584d18" />
 
-*   **Create Roles**: Navigate to **Administration > Roles** in the sidebar. Click the **"New"** button. Create a "Receptionist" (Level: Attendant), a "General Nurse" (Level: Nurse), and an "ER Physician" (Level: Doctor).
-*   <img width="1912" height="796" alt="Captura de tela 2026-05-27 211017" src="https://github.com/user-attachments/assets/a1a1b7cc-c5d0-4a52-872e-16e6b6584d18" />
-
-*   **Register Staff**: Go to **Administration > Employees**. Click **"New"** to register your professionals and assign them to the roles created above.
+*   **Registrar Staff**: Em **Administration > Employees**, cadastre os profissionais.
 <img width="1913" height="843" alt="Captura de tela 2026-05-27 211134" src="https://github.com/user-attachments/assets/a7925b92-ab0f-4d22-bc95-ac9d4a2790cb" />
 
-
-*   **Link Accounts**: Go to **Administration > Users**. Click **"New"** to create login credentials (email/password) and link them to the employee records.
-
+*   **Vincular Contas**: Em **Administration > Users**, crie as credenciais de login para os funcionários.
 <img width="1918" height="775" alt="Captura de tela 2026-05-27 211448" src="https://github.com/user-attachments/assets/f6806df2-7c4f-4a7a-9c32-cac1f679c361" />
 
-*   **Define Procedures**: Go to **Administration > Procedures**. Click **"New"**.
-    *   *Triage*: Add "Receptionist" to **Dispatch Roles** and "General Nurse" to **Execute Roles**.
-    *   *Consultation*: Add "General Nurse" to **Dispatch Roles** and "ER Physician" to **Execute Roles**.
-
+*   **Configurar Procedimentos**: Em **Administration > Procedures**, defina as regras de Dispatch e Execute para procedimentos como "Triagem" e "Consulta".
 <img width="677" height="830" alt="Captura de tela 2026-05-27 211222" src="https://github.com/user-attachments/assets/9431166a-83a6-45f2-a481-1cb998957874" />
 
+### 2. Fluxo de Admissão (Attendant Flow)
+Logue como o **Recepcionista**:
 
-### 2. Patient Intake (Attendant Flow)
-Log out and log in as the **Receptionist**.
-
-*   **Register Patient**: Navigate to **Workspace > Patients**. Click **"New"** and fill out the patient's personal data (CPF, Birth Date, etc.).
+*   **Registrar Paciente**: Em **Workspace > Patients**, faça o cadastro inicial.
 <img width="1918" height="907" alt="Captura de tela 2026-05-27 211625" src="https://github.com/user-attachments/assets/13f8aa5a-7bee-4ed8-9d25-d2b2e0451ad7" />
 
-*   **Start Attendance**: Go to **Workspace > Attendances**. Click **"New"**. Search for the patient you just created and select a **Gravity Level** (e.g., "Orange - Very Urgent").
-*   **Dispatch Triage**: In the Attendances list, click the **"View Details"** (eye icon). Inside the modal, find the **"Procedures"** section and click **"New"**. Select "Triage".The system automatically sets you as the "Ordered By" professional, and filters the "Executed by" list with the available employees that haves a role matching the procedure **"Execute Role"**, making only the previously registered **Nurse** to appear as the only option.
+*   **Iniciar Attendance**: Crie o atendimento e solicite a "Triagem". O sistema filtrará automaticamente apenas enfermeiros aptos.
 
-### 3. Clinical Execution (Nurse Flow)
-Log out and log in as the **General Nurse**.
+### 3. Execução Clínica e Encaminhamento (Nurse Flow)
+Logue como o **Enfermeiro**:
 
-*   **Task Queue**: Go to **Workspace > Attendances**. The list is filtered to show patients waiting for procedures you are qualified to execute.
-*   **Perform Triage**: Click **"View Details"** on the patient. In the Procedures list, find the "Triage" entry and click **"Edit"** (pencil icon).
-*   **Clinical Notes**: Change the status to **"In Progress"**. Fill the **Description** with vitals (BP, Heart Rate, Symptoms). Once done, change the status to **"Done"**.
-*   **Chain Workflow**: Before closing the base Attendance modal, use the **"New"** button in the Procedures section to dispatch a **"Consultation"**. Because you are a Nurse, you have the authority to "hand off" the patient to a Doctor.
-
+*   **Realizar Triagem**: Altere o status para **"In Progress"**, registre os sinais vitais e finalize como **"Done"**.
+*   **Workflow em Cadeia**: Antes de fechar, solicite uma **"Consulta"**. Por ser um Enfermeiro, você tem autoridade para encaminhar o paciente ao Médico.
 <img width="1918" height="912" alt="Captura de tela 2026-05-27 211654" src="https://github.com/user-attachments/assets/5685b1ad-34f3-43c4-bc9a-e2f81b223f09" />
 
+### 4. Atendimento Especializado (Doctor Flow)
+Logue como o **Médico**:
 
-### 4. Specialized Care (Doctor Flow)
-Log out and log in as the **ER Physician**.
+*   **Medical Review**: Revise as notas da triagem e execute a "Consulta", adicionando diagnóstico e tratamento (com busca integrada de **Medicines**).
 
-*   **Medical Review**: Open the patient's attendance. You can read the Nurse's Triage notes for context.
-*   **Finalize**: Edit the "Consultation" procedure. Add the diagnosis and treatment plan. If medications are administered, select them from the **Medications** searchable input.
 ---
 
-## 🐳 Setup Guide
+## 🐳 Setup e Instalação (Docker)
 
-### 1. Prerequisites
-- Docker & Docker Compose
-- A `.env` file in the root directory (see `.env.example`)
+### 1. Pré-requisitos
+- Docker & Docker Compose.
+- Arquivo `.env` na raiz (baseie-se no `.env.example`).
 
-### 2. Launch Infrastructure
+### 2. Subir a Infraestrutura
 ```bash
-# Start all services (Postgres, Redis, API, Web)
+# Inicialização de todos os serviços (API, Web, DB, Redis)
 docker-compose up --build
 ```
 
-### 3. Database Migrations & Initial Setup
-Migrations run automatically on container startup. To manually manage migrations or seed the database with the initial Admin account:
+### 3. Migrações e Dados Iniciais (Seed)
+As migrations rodam automaticamente. Para popular o banco com a conta Admin inicial e roles base, execute:
 
 ```bash
-# Run migrations
-docker-compose exec api alembic upgrade head
-
-# Seed initial data (Admin account, base roles, and sample employees)
+# Popular o banco (Seed)
 docker-compose exec api python -m app.seed
 ```
 
-**Initial Admin Credentials:**
+**Credenciais Administrativas Iniciais:**
 - **Email**: `admin@medmanager.com`
-- **Password**: `admin123`
+- **Senha**: `admin123`
 
-*Note: You should use this account to perform the initial "Hospital Brain" setup described in the tutorial. The default admin can be removed or deactivated once you have created your own administrative accounts.*
-
-### 4. Running Tests
-The project maintains a heavy focus on behavioral verification.
-
+### 4. Executando Testes
 **Backend Tests (Pytest):**
 ```bash
 docker-compose exec api pytest app/tests/
@@ -135,7 +176,11 @@ docker-compose exec frontend npm test
 
 ---
 
-## 🌍 Localisation
-The system is fully internationalized. Language preferences are persisted in `localStorage` and applied globally via the `AuthGuard` and `useAuthStore`. Currently supported:
-- 🇧🇷 Portuguese (Default)
-- 🇺🇸 English
+## 🌍 Suporte a Idiomas (i18n)
+O sistema é totalmente internacionalizado. Preferências de idioma são persistidas no `localStorage`.
+- 🇧🇷 **Português (Padrão)**
+- 🇺🇸 **Inglês**
+
+---
+*Este projeto foi desenvolvido como demonstração técnica de nível Pleno para o Processo Seletivo FESF-SUS (2026).*
+   
