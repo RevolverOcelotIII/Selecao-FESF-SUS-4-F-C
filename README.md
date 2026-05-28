@@ -62,7 +62,7 @@ Para atender estritamente aos critérios de nomenclatura e organização do **Ed
 
   3. Execução Funcional
 
-  O desenvolvimento funcional é comprovado pela execução bem-sucedida de 85 testes de backend e 13 arquivos de teste de frontend dentro dos containers
+  O desenvolvimento funcional é comprovado pela execução bem-sucedida de 85 testes de backend e 186 testes de frontend dentro dos containers
   Docker, garantindo que qualquer alteração no código seja validada automaticamente contra regressões.
 
    * Comandos de Verificação:
